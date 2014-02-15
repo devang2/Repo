@@ -1,0 +1,27 @@
+
+ Volume in drive C is USGS-LUCIUS
+ Volume Serial Number is 1C6F-541A
+ Directory of C:\HERSHEY
+
+CYRILLIC FON        10,284 09-00-93   9:00a
+GOTHENGL FON        12,472 09-00-93   9:00a
+GOTHGERM FON        12,866 09-00-93   9:00a
+GOTHITAL FON        11,168 09-00-93   9:00a
+GRKCMPLX FON         9,266 09-00-93   9:00a
+GRKCMPSM FON         8,496 09-00-93   9:00a
+GRKSMPLX FON         7,258 09-00-93   9:00a
+ITLCMPLX FON         9,546 09-00-93   9:00a
+ITLCMPSM FON         8,782 09-00-93   9:00a
+ITLTRPLX FON        11,292 09-00-93   9:00a
+ROMCMPLX FON         8,998 09-00-93   9:00a
+ROMCMPSM FON         8,540 09-00-93   9:00a
+ROMDUPLX FON         9,240 09-00-93   9:00a
+ROMSMPLX FON         7,090 09-00-93   9:00a
+ROMTRPLX FON        11,288 09-00-93   9:00a
+SCRCMPLX FON        10,136 09-00-93   9:00a
+SCRSMPLX FON         8,600 09-00-93   9:00a
+EQNCMPLX FON        13,262 01-25-94   3:04p
+EQNTRPLX FON        15,348 01-25-94   3:05p
+EQNSMPLX FON         8,960 01-25-94   3:03p
+       20 file(s)        202,892 bytes
+                     106,520,576 bytes free

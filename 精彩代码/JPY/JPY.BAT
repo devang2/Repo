@@ -1,0 +1,3 @@
+cd\jpy
+jpy
+cd\

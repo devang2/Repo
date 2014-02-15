@@ -1,0 +1,350 @@
+>>>IMAGES.DOC
+
+A. Copyright Information
+
+Images.Hpp and Images.Cpp along with this document file are copyright 1991
+by the Gamers Programming Workshop, GAMERS forum, Compuserve (GO GAMERS,
+section 11). The code and related document are free for use, distribution,
+and modification, provided the following conditions are met:
+
+	1. no commercial use of this source code or documents is permitted.
+	2. no fee may be charged beyond disk duplication cost for any of this
+	   material.
+	3. If the code is upgraded or modified a copy of the modification must
+	   be uploaded to section 11 of the GAMERS forum on Compuserve. All
+	   modifications must be documented and the author's name included in
+	   the source code header block, and the subsequent file package must
+	   include all the original doc files as well as any additions. If you
+	   modify or add functions please update the function list below.
+
+
+B. Description
+
+Images.hpp and images.cpp provide basic tools for working in graphics mode
+13h, the 256 color standard vga mode, which has become the most popular for
+producing high quality gaming software. The following files are required to
+use the tools in this package:
+
+	IMAGES.HPP   - the image tools header file
+	IMAGES.CPP   - image tools function definitions
+	KEYBOARD.HPP - low level keyboard interface header file
+	KEYBOARD.CPP - functions required by the font class in images.hpp
+
+A demo of the functions in this package is included, as IDEMO.EXE.
+
+NOTE: Compile these modules in the Large model (pointers default to far).
+
+C. Function interface
+
+*****************************************************************************
+*****************************************************************************
+
+The following functions are proto'd in IMAGES.HPP and, defined in
+IMAGES.CPP:
+
+*****************************************************************************
+*****************************************************************************
+
+void unpackpcx(FILE *pcx, const char far *source,
+			   char far *dest, unsigned int num_bytes);
+
+Originally used for all PCX unpacking this function was retained when the
+pcx class was created so that anyone who needs it will have access to a basic
+rle unpacking algorithm for PCX files. It will unpack from a disk file or
+a source buffer, depending on which of pcx and source has a valid pointer.
+It is illegal for both of these pointers to be NULL, or for both to be valid.
+Unpacks num_bytes of data to memory at dest.
+
+*****************************************************************************
+
+void setgraphmode();
+
+setgraphmode() calls interrupt 0x10, function 0x13 to set mode 0x13 graphics
+(320 x 200 x 256 colors)
+
+*****************************************************************************
+
+void settextmode();
+
+settextmode() calls interrupt 0x10, function 0x13 to set 80 x 25 x 16 text
+mode.
+
+*****************************************************************************
+
+void wait_vbi();
+
+wait_vbi() returns when it senses the start of the next full vertical blank-
+ing interval. Use before writing to video ram in order to prevent snow and
+flickering. In performance sensitive functions you'll probably want to copy
+this short bit of asm code into the function to eliminate the call overhead.
+
+*****************************************************************************
+
+void reporterr(char type, char where[30]);
+
+reporterr() is used to reset text mode and report the particulars of an
+error in the images module to the screen. Pass it the result of the offending
+function, and a message describing where the error occured. I make no claims
+that this is a great error handling system. Feel free to implement your own.
+
+*****************************************************************************
+
+void loadpalette(int start, int number, const p_rec palette);
+
+loadpalette() accesses the DAC directly, and loads number palette registers
+beginning with register start. Values loaded are taken from palette. See
+the p_rec type defined in IMAGES.HPP.
+
+*****************************************************************************
+
+void readpalette(int start, int number, p_rec palette);
+
+readpalette() accesses the DAC directly, and reads number palette registers
+into palette beginning with register start. See p_rec type defined in
+IMAGES.HPP
+
+*****************************************************************************
+
+void clrpalette(int start, int number);
+
+clrpalette() clears number palette registers beginning with register start.
+Registers are cleared to 0.
+
+*****************************************************************************
+
+void fadepalettein(int start, int count, const p_rec palette);
+
+fadepalettein() does a 64 pass DAC palette fade. It is called by the pcx::
+display() member function, and may be called by any other function as well.
+Clear the palette first, and then place the image data in the video buffer,
+then call this function, which will fade the image in smoothly. Operates on
+count registers beginning with register start. See type p_rec defined in
+IMAGES.HPP
+
+*****************************************************************************
+
+void fadepaletteout(int start, int count);
+
+fadepaletteout() removes an image from screen by fading the palette registers
+to zero. Operates on count registers beginning with register start.
+
+*****************************************************************************
+
+void setgraphseg(unsigned newseg);
+
+setgraphseg() sets the value of the GRAPH_SEG global variable (declared in
+IMAGES.CPP to the desired value. All image routines that write or read
+video memory (with the exception of the fades, wipes, and dissolves) assume
+the video buffer begins at offset 0 of the segment contained in GRAPH_SEG.
+This is usefull for redirecting the functions to operate on a virtual screen
+in system ram.
+
+*****************************************************************************
+
+void clearscr(int color);
+
+clearscr() clears the entire screen to the passed color. Assumes video buffer
+at GRAPH_SEG.
+
+*****************************************************************************
+
+void barfill(int tlx, int tly, int brx, int bry, int color);
+
+barfill() fills the rectangle bounded by top left coord (tlx,tly), and
+bottom left coord (blx,bly) with color. Assumes video buffer at GRAPH_SEG
+
+*****************************************************************************
+
+void writepixel(int x, int y, int color);
+
+writepixel() sets the color of the pixel at x,y. Color must be in the range
+0..255. Assumes video buffer at GRAPH_SEG.
+
+*****************************************************************************
+
+char readpixel(int x, int y);
+
+readpixel() returns the color value of the pixel at x,y. Color will be in
+the range 0..255. Assumes video buffer at GRAPH_SEG.
+
+*****************************************************************************
+
+void far *xy_to_ptr(int x, int y);
+
+xy_to_ptr returns a pointer to video memory at the location of pixel x,y.
+Assumes video buffer at GRAPH_SEG.
+
+*****************************************************************************
+
+void line(int x0, int y0, int x1, int y1, int color);
+
+line() draws a line one pixel wide from (x0,y0) to (x1,y1) in color. Color
+must be in the range 0..255. Assumes video buffer at GRAPH_SEG. This func-
+tion could stand the addition of line styles and widths.
+
+*****************************************************************************
+
+void getimage(int x0, int y0, int x1, int y1, char far *buff);
+
+getimage() grabs the video data in the rectangle bounded by top left coord
+(x0,y0) and bottom right coord (x1,y1) and puts it in memory starting with
+the location pointed to by buff. This is a 2d to linear translation, in
+other words the image lines are stored consecutively in the buffer.
+
+*****************************************************************************
+
+void putimage(int x0, int y0, int x1, int y1, char far *buff);
+
+putimage() writes the image starting at memory location buff to screen in
+the rectangle bounded by top left coord (x0,y0) and bottom right coord
+(x1,y1). This is a linear to 2d translation.
+
+*****************************************************************************
+
+void copyimage(int x0, int y0, int x1, int y1, int putx, int puty,
+			   void far *src_buf);
+
+copyimage() moves an image bounded by top left coord (x0,y0), and bottom
+right coord (x1,y1) from the src_buff to the video buffer (assumes GRAPH_
+SEG). This is a 2d to 2d translation. In other words, the image is pulled
+from a rectangle in src_buf and blitted to a rectangle in the video buffer
+at top left coord (putx,puty).
+
+*****************************************************************************
+
+void doSplitVerticalWipe(void far *pic_buf);
+
+doSplitVerticalWipe() moves the image in pic_buf to the video buffer using a
+wipe from right and left towards center. If pic_buf == NULL it clears the
+screen to 0 using the same wipe.
+
+*****************************************************************************
+
+void doSplitHorizWipe(void far *pic_buf);
+
+doSplitHorizWipe() moves the image in pic_buf to the video buffer using a
+wipe from top and bottom towards center. If pic_buf == NULL it clears the
+screen to 0 using the same wipe.
+
+*****************************************************************************
+
+void doSlideVerticalWipe(void far *pic_buf);
+
+doSlideVerticalWipe() moves the image in pic_buf to the video buffer by
+sliding two halves of the image in from left and right towards the center.
+Takes no action if pic_buf == NULL. This function is not perfect, even though
+it's highly optimized. For most images the wipe is jittery toward the end.
+Even so, it's an impressive effect, so test your images with it before you
+discard it. On faster machines it should work fine, there's just a lot of
+memory moves to be made in very short intervals.
+
+*****************************************************************************
+
+void doSlideHorizWipe(void far *pic_buf);
+
+doSlideHorizWipe() is similar to doSlideVerticalWipe, except that the two
+halves of the image slide in from top and bottom. Also pretty impressive
+this function is a little less performance sensitive than the one above
+because the lines being copied live in linear memory addresses, unlike above
+where rows are copied, and not lines.
+
+*****************************************************************************
+
+void doVerticalDissolve(void far *pic_buf);
+
+doVerticalDissolve() moves the image in pic_buf to the video buffer using
+expanding vertical bands. If pic_buf == NULL then the screen is cleared in
+the same manner.
+
+*****************************************************************************
+
+void doHorizDissolve(void far *pic_buf);
+
+doHorizDissolve() is similar to doVerticalDissolve, except that it uses
+expanding horizontal bands. Also clears the video buffer is pic_buf == NULL.
+
+*****************************************************************************
+
+void doSparkleDissolve(void far *pic_buf);
+
+doSparkleDissolve is not implemented as of July 5, 1991. It will eventually
+move the image in pic_buf to the video buffer by doing a pseudo random
+pixel placement.
+
+****************************************************************************
+
+D. Classes defined in Images.Hpp
+
+In addition to the above functions there are four classes defined as part
+of the images toolkit. These are a font class, window class, images class,
+pcx class, and stack class. See FONT.DOC, WIN.DOC, and PCX.DOC for an expl-
+anation of the interface with these object types. Stack class is not docum-
+ented at this point, since it is not used.
+
+E. Constants
+
+// image fade constants ***************************************************
+
+const char SnapWipe = 0;             // simple block copy to vram
+const char SplitVerticalWipe = 1;    // fades from top and bottom
+const char SplitHorizWipe = 2;       // fades from right and left
+const char SlideVerticalWipe = 3;    // slides image in from right and left
+const char SlideHorizWipe = 4;       // slides image in from top and bottom
+const char VerticalDissolve = 5;     // fades multiple vertical slices
+const char HorizDissolve = 6;        // fades multiple horizontal slices
+const char SparkleDissolve = 7;      // fades with random pixel placement
+const char SoftFade=8;	             // does a palette shifted fade
+
+// error reporting constants **********************************************
+
+const char NoErr = 0;            // no error occured
+const char MemErr = 1;           // error occured allocating memory
+const char FileReadErr = 2;      // error occured reading a file
+const char FileWriteErr = 3;     // error occured writing a file
+const char FileMakeErr = 4;      // error occured creating a file
+const char FileOpenErr = 5;      // error occured opening file
+const char FileFormatErr = 6;    // bad file format error
+const char SecondaryErr = 7;     // error occured in subroutine during call
+const char UnknownErr = 8;       // an unknown error occured
+
+// For use with type PRec *************************************************
+
+const short Red = 0;               // constants used with type PRec
+const short Green = 1;             // example: PRec Palette;
+const short Blue = 2;			   //          Palette[0][Green]=63;
+
+// for use with call to pcx::load() ***************************************
+
+const char Packed = 0;             // load image in compressed form
+const char Unpacked = 1;           // load image in uncompressed form
+const char Bestfit = 2;            // load compressed or uncompressed
+
+F. Static Variables
+
+static unsigned int GRAPH_SEG = 0xA000; // segment for video operations
+static p_rec current;                   // palette record for fades
+
+G. Pros and Cons
+
+For the most part this module is in very good working order. I know of no
+serious bugs in the works at this point. There are several areas which need
+further work, though. The whole module treats background color very simply,
+it assumes that the background is always palette value 0. This is true for
+fadeouts, font transparency, etc. A better way would be to store the back-
+ground value, and provide an interface through setbackgroundclr() function.
+Then use this value in all functions that need to know the background color.
+
+Another area which needs work is the font capturing. There is a very rudi-
+mentary capture program included which will allow you to draw fonts in PCX
+format and capture them, but a far better method would be to write a font
+design program. The fonts are also fairly fat (the included font in 4k). A
+lot of this is due to storing the background. Some sort of delta compression
+of the font data would be usefull to reduce this size. I'd welcome any one
+who wants to make improvements to any of this code.
+
+H. Support.
+
+If you have a problem using these routines, please leave a message to
+76605,2346 Mark Betz in the Game Desing section (sec. 11) of the Gamers
+Forum on Compuserve. I'm sorry, but no support can be provided by telephone
+or by e-mail.

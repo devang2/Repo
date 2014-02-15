@@ -1,0 +1,26 @@
+cd..
+del vgal.lib
+tlib vgal.lib + source\XMS.OBJ
+tlib vgal.lib + source\VGABASE.OBJ
+tlib vgal.lib + source\VGADRAW.OBJ
+tlib vgal.lib + source\FILLBASE.OBJ
+tlib vgal.lib + source\VGAFILL.OBJ
+tlib vgal.lib + source\16.OBJ
+tlib vgal.lib + source\256.OBJ
+tlib vgal.lib + source\HIGH.OBJ
+tlib vgal.lib + source\16M.OBJ
+tlib vgal.lib + source\FONT.OBJ
+tlib vgal.lib + source\FONTSL.OBJ
+tlib vgal.lib + source\PRT.OBJ
+tlib vgal.lib + source\MOUSE.OBJ
+tlib vgal.lib + source\MOUSE16.OBJ
+tlib vgal.lib + source\MOUSE256.OBJ
+tlib vgal.lib + source\MOUSEHI.OBJ
+tlib vgal.lib + source\MOUSE16M.OBJ
+tlib vgal.lib + source\KEYMOUSE.OBJ
+tlib vgal.lib + source\ROAM.OBJ
+tlib vgal.lib + source\ROAM16.OBJ
+tlib vgal.lib + source\ROAM256.OBJ
+tlib vgal.lib + source\ROAMHIGH.OBJ
+cd source
+

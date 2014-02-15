@@ -1,0 +1,10 @@
+/* tstdisp1.lbl */
+viewport(0.2,133.133,0.15,99.85);
+window(0.0,133.333,0.0,100.0);
+frame();
+viewport(0.0,133.333,0.0,100.0);
+window(0.0,133.333,0.0,100.0);
+lorg(4);  csize(0.7);  ldir(0.0);
+label(66.666,98.0,"Test 3 of GPR_DISP (PCX file)");
+plot(40.666,95.0,-2);
+plot(92.666,95.0,-1);

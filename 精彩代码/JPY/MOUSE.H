@@ -1,0 +1,16 @@
+void BOY_MOUSE_VIEW(void);
+void BOY_MOUSE_HIDE(void);
+void BOY_MOUSE_MOVE(int x,int y);
+void BOY_MOUSE_GET(int *x,int *y);
+void BOY_MOUSE_DGET(int *x,int *y);
+void BOY_MOUSE_GETALL(int *x,int *y,int *button);
+void BOY_MOUSE_TYPE(int s);
+int BOY_MOUSE_INBOX(int x1,int y1,int x2,int y2);
+int BOY_MOUSE_BUTTON(void);
+int BOY_SET_MOUSE(void);
+void itoa_test(int x,int y,int data,int color,int bkcolor);
+int getinput();
+int waitforinput();
+int quit();
+void read_site(int mouse_x,int mouse_y);
+void just_site(int mouse_x,int mouse_y,int first_v,int end_v);

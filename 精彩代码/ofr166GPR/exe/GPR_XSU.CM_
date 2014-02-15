@@ -1,0 +1,23 @@
+; GPR_XSU.CM_
+batch = "FALSE"
+dzt_infilename  = ""
+channel         = 0
+mrk_infilename  = ""
+xyz_infilename  = ""
+mrk_offset      = 0
+ant_sep         = 0
+dzt_outfilename = ""
+su_outfilename  = ""
+spatial_dir    = 0   ; 0 = X-direction from XYZ file (default)
+  ;					   1 = Y-direction from XYZ file
+spatial_start  = 0.0
+spatial_stop   = 0.0
+spatial_step   = 0.0
+bin_size       = 0.0
+year   = -1
+month  = -1
+day    = -1
+hour   = -1
+minute = -1
+second = -1
+

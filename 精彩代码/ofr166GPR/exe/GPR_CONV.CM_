@@ -1,0 +1,39 @@
+; GPR_CONV.CM_
+batch = "FALSE"
+num_input_files = 0
+input_filelist[]
+output_filelist[]
+use_mark_file = "FALSE"
+use_xyz_file = "FALSE"
+channel = 1
+other_format = "FALSE"
+file_header_bytes  = 0
+trace_header_bytes = 0
+in_samps_per_trace = 0
+in_time_window     = 0
+input_datatype     = 0
+output_datatype    = 0
+timezero_sample    = 0
+traces_per_sec     = 0.0
+number_of_stacks   = 1
+nominal_frequency  = 0
+pulser_voltage     = 0.0
+antenna_separation = 0.0
+antenna_name       = ""
+traces_per_meter   = 0.0
+meters_per_mark    = 0.0
+starting_position  = 0.0
+final_position     = 0.0
+position_step_size = 0.0
+position_units     = ""
+year_created       = 0
+month_created      = 0
+day_created        = 0
+hour_created       = 0
+minute_created     = 0
+num_gain_pts       = 0
+gain_pts[]         =
+text               = ""
+proc_hist          = ""
+survey_mode        = ""
+nominal_RDP        = 0.0

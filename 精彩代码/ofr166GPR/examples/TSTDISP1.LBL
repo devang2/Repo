@@ -1,0 +1,8 @@
+/* tstdisp1.lbl */
+viewport(0.0,133.333,0.0,100.0);
+window(0.0,133.333,0.0,100.0);
+frame();
+lorg(4);  csize(0.7);  ldir(0.0);
+label(66.666,98.0,"Test 1 of GPR_DISP (EPS file)");
+plot(40.666,95.0,-2);
+plot(92.666,95.0,-1);

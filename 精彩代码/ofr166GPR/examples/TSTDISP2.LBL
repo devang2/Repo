@@ -1,0 +1,8 @@
+/* tstdisp2.lbl */
+viewport(0.0,75.0,0.0,100.0);
+window(0.0,75.0,0.0,100.0);
+frame();
+lorg(4);  csize(0.7);  ldir(0.0);
+label(37.5,98.0,"Test 2 of GPR_DISP");
+plot(22.5,95.0,-2);
+plot(52.5,95.0,-1);

@@ -1,0 +1,207 @@
+>>> FONT.DOC
+
+****************************************************************************
+
+Images.Hpp and Images.Cpp along with this document file are copyright 1991
+by the Gamers Programming Workshop, GAMERS forum, Compuserve (GO GAMERS,
+section 11). The code and related document are free for use, distribution,
+and modification, provided the following conditions are met:
+
+	1. no commercial use of this source code or documents is permitted.
+	2. no fee may be charged beyond disk duplication cost for any of this
+	   material.
+	3. If the code is upgraded or modified a copy of the modification must
+	   be uploaded to section 11 of the GAMERS forum on Compuserve. All
+	   modifications must be documented and the author's name included in
+	   the source code header block, and the subsequent file package must
+	   include all the original doc files as well as any additions. If you
+	   modify or add functions please update the function list below.
+
+****************************************************************************
+
+Images.hpp and images.cpp provide basic tools for working in graphics mode
+13h, the 256 color standard vga mode, which has become the most popular for
+producing high quality gaming software. The following files are required to
+use the tools in this package:
+
+	IMAGES.HPP   - the image tools header file
+	IMAGES.CPP   - image tools function definitions
+	KEYBOARD.HPP - low level keyboard interface header file
+	KEYBOARD.CPP - functions required by the font class in images.hpp
+
+A demo of the functions in this package is included, as IDEMO.EXE.
+
+NOTE: Compile these modules in the Large model (pointers default to far).
+
+*****************************************************************************
+
+Images.Hpp contains the declaration of a class font, which is an object
+class designed to do basic operations with bitmapped text in VGA mode 13h
+(standard 256 color graphics mode). There is also a source file included
+for GETFONT.EXE which can be used to capture your own fonts which have been
+saved in .PCX format.
+
+
+USING THE FONT CLASS
+
+
+The font class contains a font bitmap, as well as related data, and meth-
+ods for displaying and reading text strings, setting the text style, and
+checking for a valid installation. An object of this class is defined as
+follows:
+			font small("csfont1.fnt");
+
+or
+			font *small
+			small = new font("csfont1.fnt");
+
+This statement generates a call to the font constructor, which performs
+5 important tasks. First the font file is opened, then the font header and
+character width table are read into data space in the font object. It then
+allocates enough memory for the cursor mask, and reads that in from disk.
+Last, memory is allocated and the font bitmap itself is loaded. If at any
+point in this process an error occurs the constructor terminates and the
+function sets the font status variable to 0. This variable is returned by
+a call to installed(). If the initialization is successful the font is set
+to default style : foreground=0, background=15, character tab=1, opacity=
+opaque, space=5. This yields black on white text which overwrites the cur-
+rent image. The letters are spaced 1 pixel apart, and a space character is
+worth 5 pixels.
+
+All allocated memory is freed by the destructor as soon as the font object
+goes out of scope and is no longer needed, or if it is deleted (if opened
+using the new operator).
+
+The interface to the font object is contained in these functions:
+
+****************************************************************************
+
+void setstyle(int f_grnd,int b_grnd,short char_tab,opacity o,char space_wid);
+
+>>	setstyle() selects the style of text that will be used on the next call
+to show(). Call with foreground color in f_grnd, background color in b_grnd,
+pixels between characters in char_tab, background treatment in o, and width
+of space character (ascii 32) in pixels in space_wid. Possible values are:
+
+	f_grnd, b_grnd : 0..255
+	char_tab       : 0..320
+	space_wid      : 0..10
+	o              : trans,opaque
+
+When o is set to trans the value in b_grnd is ignored, and only the fore-
+ground color of the text is plotted. When o is opaque the background color
+is plotted.
+
+****************************************************************************
+
+int getforecolor();
+
+>>	returns the current text foreground color
+
+****************************************************************************
+
+int getbackcolor();
+
+>>	returns the current text background color
+
+****************************************************************************
+
+void show(int x, int y, char *str);
+
+>>	displays the string of characters pointed to by str, with the top left
+corner of the first character displayed at (x,y). This function does not
+return a value. The displayed text is not clipped at the screen edge, but
+will wrap into the next scan line.
+
+****************************************************************************
+
+void readstr(int x, int y,char *str, char length, char mask);
+
+>>	readstr() reads in a series of characters entered at the keyboard and
+stores them in the string pointed to by str. The resulting string is prop-
+erly formatted with a terminating null '\0' character. The entered text is
+echoed to the screen at (x,y), as in show() above. The function returns
+when the user presses enter, or the string reaches length bytes. As the
+entered text is echoed to screen the function moves a blinking cursor, the
+mask for which is stored as part of the font data. A good improvement to
+the font class would be to allow the cursor mask to be redefined to something
+other than the font default. Backspace is supported, but insert and delete
+are not, and they would be another good improvement. The function gets its
+keystrokes from the getfilteredkey() function defined in KEYBOARD.HPP. The
+mask value determines which characters are passed through. See the definition
+of the mask types in KEYBOARD.DOC.
+
+****************************************************************************
+
+int installed();
+
+>>	installed() should be called immediately after defining an instance of
+a font object, to ensure that there were no errors during initialization
+of the font. The funtion returns 1 if no errors occured, or 0 if an error
+has occured. Possible errors are memory allocation and file access errors.
+
+****************************************************************************
+
+
+The following is an example:
+
+	#include <stdio.h>
+	#include "images.h"
+	#include "keyboard.h"
+
+	void main() {
+		char *str;
+
+		// set up graphics mode
+
+		_setgraphmode();
+
+		// clear the screen to white
+
+		clearscr(15);
+
+		// initialize csfont1.fnt from the current directory
+
+		font small("csfont1.fnt");
+
+		// check for successful installation
+
+		if (!small.installed()) {
+			printf("error installing font object\n");
+			return;
+		}
+
+		// set style to black on black, 1 pixel between characters, back-
+		// ground is transparent, space=5
+
+		small.setstyle(0,0,1,trans,5);
+
+		// display a string at 10,10
+
+		small.show(10,10,"This black text does not overwrite the background");
+
+		// set style to blue on white, background is opaque
+
+		small.setstyle(9,15,1,opaque,5);
+		small.show(10,10,"This blue on white text does overwrite it");
+		clearscr(15);
+		small.show(10,10,"Now type in a text string, then press enter.");
+
+		// read in a string and echo to screen at 10,20
+
+		small.readstr(10,20,str,30);
+		small.show(10,30,"Here is the string you entered:");
+		small.show(10,40,str);
+		small.show(50,180,"press any key to exit");
+		while (!kbhit());
+	}
+
+
+For information on using the getfont source to capture your own fonts see
+GETFONT.DOC
+
+Support:
+
+Support for this code will be provided as and where possible through messages
+posted to 76605,2346 in the Game Design section (sec. 11) of the Gamers
+Forum on Compuserve. Sorry, but no telephone support is possible.

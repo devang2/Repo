@@ -1,0 +1,30 @@
+; GPR_PROC.CM_
+batch = "FALSE"
+num_input_files = 0
+input_filelist[]
+output_filelist[]
+channel = 1
+; NOTE that options are performed in the order they are listed by you. One
+; suggested sequence is given below.
+glob_bckgrnd_rem = "FALSE"
+glob_forgrnd_rem = "FALSE"
+num_gain_off = 0
+gain_off[]
+amp_adjust       = "INVALID_VALUE"
+low_freq_cutoff  = -1.0 ; NOTE: both low and high cutoffs must be given if
+high_freq_cutoff = -1.0 ;       either or both are requested
+preprocFFT       = "TRUE"
+samp_slide       = 0
+wind_bckgrnd_rem = 0
+wind_forgrnd_rem = 0
+stack            = 0
+amp_scale        = 1.0
+hsmooth          = 0
+vsmooth          = 0
+spatial_median   = 0
+temporal_median  = 0
+inst_amp         = "FALSE"
+inst_pow         = "FALSE"
+num_gain_on  = 0
+gain_on[]
+trace_equalize   = -1
