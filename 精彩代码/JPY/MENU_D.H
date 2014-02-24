@@ -21,7 +21,7 @@ extern int count,con1,con2;
 extern int cs_1;
 extern int max_num;
 extern int mouse_test_sign;
-struct pd_str{
+extern struct pd_str{
   char *main;
   void (*m_help)();
   char *sub[PD_SUB];

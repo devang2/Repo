@@ -8,7 +8,7 @@
 #include <string.h>
 #include <graphics.h>
 #include <float.h>
-#include <sys/stat.h>
+#include <stat.h>
 #include <io.h>
 #include <fcntl.h>
 #include <bios.h>

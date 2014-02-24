@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <bios.h>
 #include <io.h>
-#include <sys/stat.h>
+#include <stat.h>
 #include <fcntl.h>
 #define IGNORE 0
 #define RETRY 1

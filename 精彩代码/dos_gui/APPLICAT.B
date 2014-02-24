@@ -1,0 +1,993 @@
+// 1993 (c) ALL RIGHTS RESERVED
+// AUTHOR:  XuYongYong
+
+/* 	applicat.cpp
+*/
+#include "applicat.h"
+#include "yyxmain.h"
+#include "msgbox.h"
+#include <process.h>
+#include <dos.h>
+#include <alloc.h>
+#include "mouse.h"
+
+#include <malloc.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+extern "C" far _selectVGABitPlane ( int planeNo, int cmd );
+enum dosErr { dosInvalidFuncCode = 1, dosFileNotFound, dosPathNotFound,
+	dosTooManyOpenFiles, dosAccessDenied, dosInvalidHandle,
+	dosMemCtrlBkDestryed, dosInsufficientMem, dosInvalidMemBkAddr,
+	dosInvalidEnvir, dosInvalidFormat, dosInvalidAccessCode,
+	dosInvalidDate, dosUnKnownErr, dosInvalidDrv, dosAttemptRDCurDir,
+	dosNotSameDevice, dosNoMoreFiles, dosDiskIsWriteProtected,
+	dosBadDiskUnit, dosDriveNotReady, dosInvalidDiskCom, dosCRCErr,
+	dosInvalidLeninDiskOp, dosSeekErr, dosNotDosDisk, dosSectorNotFound,
+	dosOutofPaper, dosWriteFault, dosReadFault, dosGeneralFailt,
+	dosSharingViolation, dosLockViolation, dosWrongDisk };
+
+
+application_class::application_class (int menu_num,char *title)
+{ int i;
+	this->menu_num =menu_num;
+	if (this->menu_num<40) this->menu_num=40;
+	my_menu=(Tmenu **) farmalloc( (sizeof (Tmenu*)) * (menu_num+1) );
+	for (i=0;i<menu_num;i++ ) my_menu[i]=NULL;
+	for (i=0;i<=5;i++ )  sub_sysmenu[i]=NULL;
+	for (i=0;i<=5;i++ )  sub_win_sysmenu[i]=NULL;
+	start_menu =NULL;
+
+	this->title =title;
+// /interrupt/interrupt/interrupt/interrupt/interrupt/interrupt/interrupt
+//	timer_active =FALSE;
+//	kb_active=FALSE;
+//	TIMER_COUNT =10;
+//	SLOW_TIMER_COUNT =20;
+
+	init_msg();	//MUST DO IT FIRST,in case clock send msg
+
+	old_timer =getvect (TIMER_VECTOR);
+	setvect (TIMER_VECTOR,application_class::timer);
+
+	key_code =0;
+	old_key =getvect (KEY_VECTOR);
+	setvect (KEY_VECTOR,application_class::key  );
+
+	old_dos_error =getvect (DOS_ERROR_VECTOR );
+	setvect (DOS_ERROR_VECTOR ,application_class::dos_error  );
+
+	old_mouse =getvect (MOUSE_VECTOR); 		//MUST INIT LATER
+//	setvect (MOUSE_VECTOR,application_class::mouse  );
+}
+
+BOOL application_class::timer_active =FALSE;
+BOOL application_class::kb_active=FALSE;
+BOOL application_class::mouse_active=FALSE;
+BOOL application_class::dos_error_active=FALSE;
+
+int	 application_class::TIMER_COUNT =20;
+int  application_class::SLOW_TIMER_COUNT =40;
+//int  application_class::key_code =0;
+int  application_class::time_counter =0;
+int  application_class::slow_time_counter =0;
+
+application_class::~application_class ()
+{ int i;
+//	my_menu[0]->dispose_all_submenus();
+//	delete (my_menu[0]);
+	for (i=0;i<menu_num;i++ ) if (my_menu[i]!=NULL ) delete (my_menu[i]);
+//	delete (my_menu[39]);
+	delete (sysmenu);
+	for (i=0;i<=5;i++ ) if (sub_sysmenu[i]!=NULL )delete (sub_sysmenu[i]);
+	delete (win_sysmenu);
+	for (i=0;i<=5;i++ )if(sub_win_sysmenu[i]!=NULL )delete (sub_win_sysmenu[i]);
+//
+	if (start_menu !=NULL) delete (start_menu);
+	farfree (my_menu);
+
+//   restore old int1c
+	if (getvect(TIMER_VECTOR)==application_class::timer )
+	setvect (TIMER_VECTOR,old_timer);
+	if (getvect(KEY_VECTOR)==application_class::key )
+	setvect (KEY_VECTOR,old_key);
+	if (getvect(MOUSE_VECTOR)==application_class::mouse)
+	setvect (MOUSE_VECTOR,old_mouse);
+	if (getvect(DOS_ERROR_VECTOR)==application_class::dos_error)
+	setvect (DOS_ERROR_VECTOR,old_dos_error);
+
+	if (sysmouse) delete sysmouse;
+}
+
+
+void application_class::get_my_menu()
+{
+	my_menu[0] =new Tmenu (0,title,main_help_text,NULL );
+
+	sysmenu =new Tsysmenu (101,"& ","ALT_SPACE",my_menu[0]); {
+		sysmenu->bounds.left =my_menu[0]->bounds.left+1;
+		sysmenu->bounds.top =my_menu[0]->bounds.top+1;
+		sysmenu->bounds.right=sysmenu->bounds.left+bar_height-2;
+		sysmenu->bounds.bottom =my_menu[0]->bounds.bottom-1;
+	}
+	sub_sysmenu[0]=new Tmenu(SYS_RESTOREID,"&Restore","Restore windnow ",sysmenu);
+	sub_sysmenu[1]=new Tmenu(SYS_MOVEID,"&Move","Move window",sysmenu);
+	sub_sysmenu[2]=new Tmenu(SYS_SIZEID,"&Size","Change window size",sysmenu);
+	sub_sysmenu[3]=new Tmenu(SYS_MINIMIZEID,"Mi&nimize","Iconinize window",sysmenu);
+	sub_sysmenu[4]=new Tmenu(SYS_MAXIMIZEID,"Ma&ximize","Streatch window",sysmenu);
+	sub_sysmenu[5]=new Tmenu(SYS_CLOSEID,"Close","Close window",sysmenu);
+ int i;
+	for (i=0;i<5;i++) sub_sysmenu[i]->status |= DISABLE;
+// the order is important
+	win_sysmenu =new Tsysmenu (100,"","",my_menu[0]); {
+		win_sysmenu->bounds.left =my_menu[0]->bounds.left+1;
+		win_sysmenu->bounds.top =my_menu[0]->bounds.top+1;
+		win_sysmenu->bounds.right=win_sysmenu->bounds.left+bar_height-LINE_WIDTH+1;
+		win_sysmenu->bounds.bottom =my_menu[0]->bounds.bottom-1;
+//		OffsetRect (&win_sysmenu->bounds ,100,100 );
+		win_sysmenu->status =INVISIBLE;
+	}
+	sub_win_sysmenu[0]=new Tmenu(WIN_SYS_RESTOREID,"&Restore","Restore windnow to ",win_sysmenu);
+	sub_win_sysmenu[1]=new Tmenu(WIN_SYS_MOVEID,"&Move","Move window",win_sysmenu);
+	sub_win_sysmenu[2]=new Tmenu(WIN_SYS_SIZEID,"&Size","Change window size",win_sysmenu);
+	sub_win_sysmenu[3]=new Tmenu(WIN_SYS_MINIMIZEID,"Mi&nimize","Iconinize window",win_sysmenu);
+	sub_win_sysmenu[4]=new Tmenu(WIN_SYS_MAXIMIZEID,"Ma&ximize","Streatch window",win_sysmenu);
+	sub_win_sysmenu[5]=new Tmenu(WIN_SYS_CLOSEID,"Close","Close window",win_sysmenu);
+
+//  Set Imme_key
+	Imme_Menu_ID[0]= SYS_CLOSEID ; 	Immediate_key[0]=ALT_F4; Imme_Menu_fptr[0]=sub_win_sysmenu[5];
+	Max_Imme_key_nums=2;
+}
+
+BOOL application_class::echo_to_menu(long menu_ID)	// utter virtual
+{
+	switch (menu_ID ){
+		case SYS_CLOSEID    :thequeue.SendMessage(0
+				,SysQuitMSG,NULL );
+			break;
+		case WIN_SYS_CLOSEID :
+			thequeue.SendMessage(pcurrent_selected_win->ID
+				,WinSysCloseMSG,pcurrent_selected_win );
+			break;
+		case DOSSHELL		: DosShell (); break;
+		case WIN_SYS_MOVEID :
+		case WIN_SYS_SIZEID	:
+			key_code=CTRL_F5;
+			thequeue.SendMessage(0, KeyPressedMSG,NULL);
+			break;
+		default :return FALSE;
+	}
+	return TRUE;	// handled
+}
+
+/* ********************************************************************* */
+/* ****************************   KEY    ******************************* */
+/* ********************************************************************* */
+int  application_class::key_pressed_handler ( int key_scan_num )
+{
+		return FALSE;
+}
+
+/* ********************************************************************* */
+/* ****************************   MSG    ******************************* */
+/* ********************************************************************* */
+void application_class::show_status(int kind)
+{// disable();
+	getviewsettings (&current_viewport );
+	setport (menu_viewport);
+	setcolor (HELP_TEXT_COLOR);
+	switch ( kind ) {
+		case SYS_STATUS:
+			FillRect ( sys_status_rect,HELP_RECT_COLOR );
+			outtextxy(sys_status_rect.left+10,sys_status_rect.top,sys_status_string);
+			break;
+		case STATUS:
+			FillRect ( status_rect,HELP_RECT_COLOR );
+			outtextxy(status_rect.left+10,status_rect.top,status_string);
+			break;
+		case HELP_STATUS:
+			FillRect ( on_line_help_rect,HELP_RECT_COLOR );
+			outtextxy( on_line_help_rect.left+10,on_line_help_rect.top,main_help_text);
+			break;
+	}
+//	disable();
+	setport (current_viewport );
+//	enable();
+}
+
+int application_class::first_class_msg_handler ( MSG& message )
+{
+	switch ( message .Action){
+//		case MouseLButtonDownMSG:
+//			break;
+		case MenuActionMSG:
+			return echo_to_menu(sysmsg.ID);
+		case DlgOkedMSG:
+			return Dlg_OK;
+		case DlgCanceledMSG:
+			return Dlg_CANCEL;
+/*		case TimerMSG:
+  static unsigned int i=0;
+			switch (i++ %8) {
+			case 0:
+				sprintf (status_string,"_stklen:%ux",_stklen);
+				break;
+			case 2:
+				sprintf (status_string,"s:%up:%ux",stackavail(),_SP);
+				break;
+			case 4:
+				sprintf(status_string,"heaptop:%lux", (unsigned long) coreleft());
+				break;
+			case 6:
+				sprintf(status_string,"Fhtop:%lux", (unsigned long) farcoreleft());
+				break;
+			}
+			show_status(STATUS);
+			return FALSE;
+ */		case SlowTimerMSG:
+  static int heap;
+  static unsigned int j=0;
+			switch (j++ %3) {
+			case 0:
+				if (getvect(MOUSE_VECTOR) !=application_class:: mouse ){
+					strcpy (sys_status_string,"MOUSE UNOK");
+					if (!sysmouse) strcat (sys_status_string," !!");
+					else {
+						setvect (MOUSE_VECTOR,application_class::mouse );
+						sysmouse->on(0);
+					}
+				}
+				else strcpy (sys_status_string,"MOUSE OK");
+				break;
+			case 1:
+//~				if 	((heap=heapcheckfree(0xff)) == _HEAPOK ) strcpy (sys_status_string,"HEAP OK");
+//~					else if (heap==_BADVALUE) strcpy (sys_status_string,"BAD VALUE");
+//~					else strcpy (sys_status_string,"HEAP CORRUPT");
+				if 	((heap=heapfillfree(0xff)) == _HEAPOK ) strcpy (sys_status_string,"HEAP OK");
+					else if (heap==_HEAPEMPTY) strcpy (sys_status_string,"EMPTY");
+					else strcpy (sys_status_string,"HEAP CORRUPT");
+				break;
+			case 2:
+				if 	((heap=farheapfillfree(0x88)) == _HEAPOK ) strcpy (sys_status_string,"FARH OK");
+					else if (heap==_HEAPEMPTY) strcpy (sys_status_string,"EM FARH");
+					else strcpy (sys_status_string,"FARH RUPT");
+				break;
+			}
+			show_status(SYS_STATUS);
+			return FALSE;
+		case SysQuitMSG:
+			return Sys_QUIT;
+		case KeyPressedMSG:
+			return key_pressed_handler( key_code );
+		case WinMovingSizingMSG: //for mouse only
+			pcurrent_selected_win->	draw_size_rect();
+			if (in_win_moving ==TRUE)	//moving
+				OffsetRect (&pcurrent_selected_win->newbounds,
+				 mouse_x-old_mouse_x,mouse_y-old_mouse_y );
+			else {	//sizing
+				pcurrent_selected_win->newbounds.right +=mouse_x-old_mouse_x;
+				pcurrent_selected_win->newbounds.bottom +=mouse_y-old_mouse_y;
+			}
+			if (pcurrent_selected_win->newbounds.right>
+				win_living_viewport.right-win_living_viewport.left-2)
+				pcurrent_selected_win->newbounds.right
+					=win_living_viewport.right-win_living_viewport.left-2;
+			if (pcurrent_selected_win->newbounds.bottom>
+				win_living_viewport.bottom-win_living_viewport.top-2)
+				pcurrent_selected_win->newbounds.bottom
+					=win_living_viewport.bottom-win_living_viewport.top-2;
+			if (pcurrent_selected_win->newbounds.left<2)
+				pcurrent_selected_win->newbounds.left=2;
+			if (pcurrent_selected_win->newbounds.top<2)
+				pcurrent_selected_win->newbounds.top=2;
+
+			old_mouse_x=mouse_x;
+			old_mouse_y=mouse_y;
+			pcurrent_selected_win->	draw_size_rect();
+			return TRUE;
+		case WinSysCloseMSG:
+			if (! (((Twin*)message.fptr)->canclose||
+				  (((Twin*)message.fptr)->func_canclose()) ))  return FALSE;
+  int x,y;
+			if (((Twin*)(message.fptr)) !=pcurrent_selected_win)
+				((Twin*)(message.fptr))->select();
+	x=((Twin*)message.fptr)->bounds.left+win_living_viewport.left-menu_viewport.left+LINE_WIDTH;
+	y=((Twin*)message.fptr)->bounds.top+win_living_viewport.top -menu_viewport.top+LINE_WIDTH;
+				win_sysmenu->offsetmenu(-x,-y);
+				win_sysmenu->status |=INVISIBLE;
+			delete ((Twin*)message.fptr );
+//			delete message.fptr;
+			return TRUE ;
+		case CtrlBreakMSG:
+			error ("Ctrl  Break Pressed");
+			break;
+		default: ;//thequeue.GetMessage(sysmsg);
+		}
+	return FALSE;
+}
+
+int application_class::second_class_msg_handler ( MSG& message )
+{
+	return FALSE;
+}
+
+
+int application_class::main_message_loop()
+{ int ret_value=FALSE;
+	while ( thequeue.GetMessage(sysmsg) )
+	{
+		if ((ret_value =first_class_msg_handler(sysmsg))!=FALSE) return ret_value;
+// This is the messages MUST be handled; && No more msg should
+// converted to the menu && dialog && win moving
+// && including messages must be shown in ret_value;
+		if ( ( pcurrent_selected_win ==NULL )||
+			 ((!in_win_moving)&&(!(pcurrent_selected_win->type & DIALOG_WIN)))
+		   )
+			ret_value =pcurrent_menu->msg_handler(sysmsg);
+		if ( (in_menu_trap)||(ret_value!=FALSE) ) return ret_value;
+
+		if ( pcurrent_selected_win !=NULL )
+			pcurrent_selected_win->msg_handler(sysmsg);
+		second_class_msg_handler(sysmsg);
+////////////////!!!!!!!!!!!! New
+///////////	if ( sysmsg.Action == KeyPressedMSG ) key_code =0;
+	}
+	if  (
+		(!in_menu_trap) &&
+		( ( pcurrent_selected_win ==NULL )||((!in_win_moving)&&(!(pcurrent_selected_win->type & DIALOG_WIN))))
+		)
+		anything_in_the_loop();
+	return ret_value;
+}
+
+void application_class::anything_in_the_loop(){};
+
+void application_class::run()
+{
+ int keynum;
+Begin_Program:
+	init();
+	while (1) {
+/*		if( (keynum=bioskey(1) )== -1 ) break;
+		else if (keynum !=0 ) {
+			keynum=bioskey(0);
+			key_pressed_handler( keynum );
+		}
+*/		if (main_message_loop()==Sys_QUIT) break;
+//		if (RE_START != 0) init_screen();	//goto Begin_Program;
+	}
+}
+
+/* ********************************************************************* */
+/* ****************************   INIT   ******************************* */
+/* ********************************************************************* */
+void application_class::init()
+{
+	init_screen();
+	init_menu();  // the order is important
+	draw_application_win();
+//  settextstyle (DEFAULT_FONT,HORIZ_DIR,1 );
+	init_win();
+	init_ctrl();
+
+  void far *mouse_addr;
+	mouse_addr =getvect (0x33);
+	if (  (!((mouse_addr==NULL )||(*(unsigned char *)mouse_addr==0xcf))) &&
+		 !nomouse
+	   )  { sysmouse=new Tmouse();
+		old_mouse =getvect (MOUSE_VECTOR);
+		setvect (MOUSE_VECTOR,application_class::mouse  );
+	}
+	else sysmouse =NULL;
+
+}
+
+//#include "tvga256.h"	// Needs More MEMORY
+void application_class::init_screen()
+{
+  int gdriver = DETECT, gmode, errorcode;
+
+//	gdriver = installuserdriver("TVGA256",DETECTTVGA);/* Request auto-detection	*/
+//	gmode = TVGA640x480;
+
+	initgraph(&gdriver, &gmode, "");
+	errorcode = graphresult();
+	if (errorcode != grOk)  /* an error occurred */		{
+		printf("Graphics error: %s\n", grapherrormsg(errorcode));
+		printf("Press any key to halt:");
+		getch();
+		error("graphics error exit");      /* return with error code */
+	}
+//	RE_START =0;
+	screen_viewport.left=0;		screen_viewport.top =0;
+	screen_viewport.right =getmaxx();	screen_viewport.bottom=getmaxy();
+	screen_viewport.clip =CLIP_ON;
+	setusercharsize (10,10,10,10);
+	settextstyle (DEFAULT_FONT+SMALL_FONT,HORIZ_DIR, /*USER_CHAR_SIZE*/6 );
+	setport (screen_viewport);
+	setfillstyle (SOLID_FILL, LIGHTGRAY );
+	bar (screen_viewport.left,screen_viewport.top,screen_viewport.right,screen_viewport.bottom);
+	font_height =textheight ("HjklMq") +8;
+	bar_height =20;
+
+	menu_viewport =screen_viewport;
+	menu_viewport.left 	+=5;		menu_viewport.top  	+=5;
+	menu_viewport.right -=5;   	menu_viewport.bottom-=5;
+
+}
+
+void application_class::draw_application_win()
+{
+/////////////////////////////INIT MENUS PART/////////////////////////////////
+/////////////////////////////INIT MENUS PART/////////////////////////////////
+/////////////////////////////INIT MENUS PART/////////////////////////////////
+// draw Frame rect of the screen
+	pcurrent_menu =start_menu;
+	pcurrent_menu->psub_menu_selected =my_menu[0];
+
+	setport (screen_viewport);
+	setlinestyle ( SOLID_LINE,1,THICK_WIDTH );
+	setcolor(LIGHTGRAY);
+Rect temp_rect;
+	SetRect (&temp_rect,menu_viewport.left,menu_viewport.top,
+		menu_viewport.right,menu_viewport.bottom );
+	InsetRect (&temp_rect, -LINE_WIDTH,-LINE_WIDTH);
+	draw_win_frame_rect ( temp_rect );
+//  change menu_viewport
+	setfillstyle (SOLID_FILL, WHITE );
+
+	bar (menu_viewport.left,menu_viewport.top,menu_viewport.right,menu_viewport.bottom);
+
+//  draw help_rect
+/*	SetRect (&on_line_help_rect,0,
+		menu_viewport.bottom-menu_viewport.top-bar_height-10,
+		menu_viewport.right-menu_viewport.left,
+		menu_viewport.bottom-menu_viewport.top);
+*/
+	SetRect (&on_line_help_rect,0,
+		menu_viewport.bottom-menu_viewport.top-bar_height-10,
+		250,
+		menu_viewport.bottom-menu_viewport.top);
+
+	SetRect (&sys_status_rect,270,
+		menu_viewport.bottom-menu_viewport.top-bar_height-10,
+		400,
+		menu_viewport.bottom-menu_viewport.top);
+
+	SetRect (&status_rect,420,
+		menu_viewport.bottom-menu_viewport.top-bar_height-10,
+		menu_viewport.right-menu_viewport.left,
+		menu_viewport.bottom-menu_viewport.top);
+
+	setport (menu_viewport);
+	FillRect (on_line_help_rect, HELP_RECT_COLOR );
+	InsetRect (&on_line_help_rect, -5, -5 );
+	draw_in_button (on_line_help_rect );
+	InsetRect (&on_line_help_rect, -1, -1 );
+
+	FillRect (sys_status_rect, HELP_RECT_COLOR );
+	InsetRect (&sys_status_rect, -5, -5 );
+	draw_in_button (sys_status_rect );
+	InsetRect (&sys_status_rect, -1, -1 );
+
+	FillRect (status_rect, HELP_RECT_COLOR );
+	InsetRect (&status_rect, -5, -5 );
+	draw_in_button (status_rect );
+	InsetRect (&status_rect, -1, -1 );
+
+	if (pcurrent_menu ->psub_menu_selected !=NULL ) {
+		pcurrent_menu ->psub_menu_selected->pfather_menu=pcurrent_menu;
+		pcurrent_menu ->psub_menu_selected->select();
+		pcurrent_menu ->psub_menu_selected->pfather_menu=NULL;
+	// this makes MOUSE DEAD
+	}
+	pcurrent_menu ->enter_menu();
+
+//  draw sys menu
+	setcolor (BLACK);
+	if (pcurrent_menu != NULL ) {
+Rect tmprect;
+		setport (menu_viewport);
+		tmprect = pcurrent_menu->save_bitmap.bounds;
+		InsetRect (&tmprect ,0,1);
+		FrameRect (tmprect);
+	}
+	FillRect (sysmenu->bounds,LIGHTGRAY );
+	setcolor (BLACK );
+	FrameRect (sysmenu->bounds);
+	sysmenu->bounds.bottom -=1;
+	sysmenu->bounds.right -=1;
+
+	sysmenu->draw ();		//Not Very Good
+
+//  draw up & down rect;
+  Rect up_rect,down_rect;
+	down_rect =my_menu[0]->bounds;
+	down_rect.left=down_rect.right -bar_height+1;
+	down_rect.right -=1;
+	down_rect.bottom -=1;
+	OffsetRect (&down_rect,LINE_WIDTH-1,0 );
+	up_rect=down_rect;
+	OffsetRect (&up_rect, -bar_height+1,0 );
+
+	draw_out_button (down_rect);
+	draw_out_button (up_rect);
+}
+
+void application_class::init_msg()
+{
+	thequeue.Reset();
+}
+
+void application_class::init_menu()
+{   in_menu_trap =FALSE;
+	start_menu =new Tmenu ("INIT","");
+
+	MENU_ITEM_ENABLED_COLOR	 =BLACK     ;
+	MENU_ITEM_SELECTED_COLOR =WHITE ; // for text
+	MENU_ITEM_DISABLED_COLOR =DARKGRAY;
+	MENU_ITEM_SELECT_COLOR	 =BLUE    	; // for bar
+	HELP_RECT_COLOR 	=LIGHTGRAY ;
+	HELP_TEXT_COLOR =	BLACK;
+	MENU_RECT_COLOR =	WHITE ;
+
+	get_my_menu();
+
+// show menus
+}
+
+void application_class::init_win ()
+{
+	win_living_viewport=menu_viewport;
+	win_living_viewport.top +=2*bar_height;
+	win_living_viewport.bottom -=2*bar_height;
+
+	pfirst_win_of_all =NULL;
+	pcurrent_selected_win =NULL;
+
+	WIN_TITLEBAR_SELECTED_COLOR		=BLUE;
+	WIN_TITLEBAR_UNSELECTED_COLOR	=LIGHTGRAY;
+
+	WIN_TITLE_SELECTED_COLOR   =WHITE;
+	WIN_TITLE_UNSELECTED_COLOR =BLACK;
+
+	WIN_BACKGROUND_COLOR    =WHITE;
+}
+
+void application_class::init_ctrl ()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////
+///////////////////////////////DOSSHELL///////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+/*	// OLD VERSION
+void application_class::DosShell(void)
+{
+  int result;
+	if (pcurrent_selected_win != NULL ) {
+		exec_dialog(new Tmsgbox("Message","MUST CLOSE ALL WINDOWS",MB_OK));
+//		thequeue.SendMessage(pcurrent_selected_win->ID,
+//			WinSysCloseMSG,pcurrent_selected_win);
+//		return ;
+	}
+	closegraph();
+	setvect (KEY_VECTOR,old_key);
+	setvect (TIMER_VECTOR,old_timer); //otherwise; queue will run out of it
+	puts("Type EXIT to return to Main Program . . .");
+
+	result = spawnlp(P_WAIT, "command.com", NULL);
+	if(result==-1) 	{
+		puts("\nNot enough memory to run command.com. . .");
+		getch();
+	}
+
+	init_screen();
+	draw_application_win();
+	setvect (KEY_VECTOR,application_class::key  );
+	setvect (TIMER_VECTOR,application_class::timer );
+	if (sysmouse) sysmouse->on(0);
+}
+*/
+
+void application_class::DosShell(void)
+{
+  int result;
+
+  void 	interrupt (*mynow_timer)(...);
+  void 	interrupt (*mynow_key  )(...);
+  void 	interrupt (*mynow_dos_error)(...);
+  void 	interrupt (*mynow_mouse)(...);
+
+	mynow_timer=getvect (TIMER_VECTOR);
+	mynow_key  =getvect (KEY_VECTOR);
+	mynow_dos_error=getvect (DOS_ERROR_VECTOR);
+	mynow_mouse=getvect (MOUSE_VECTOR);
+
+	setvect (KEY_VECTOR,old_key);
+	setvect (DOS_ERROR_VECTOR,old_dos_error);
+	setvect (TIMER_VECTOR,old_timer);
+	if (getvect(MOUSE_VECTOR)==application_class::mouse)
+		setvect (MOUSE_VECTOR,old_mouse);
+	//otherwise; queue will run out of it
+
+	mouse_off;
+	_screen2Disk ( "XYYSWP.SWP" );
+	closegraph();
+
+	puts("Type EXIT to return to Main Program . . .");
+
+	result = spawnlp(P_WAIT, "command.com", NULL);
+	if(result==-1) 	{
+		puts("\nNot enough memory to run command.com. . .");
+		getch();
+	}
+
+	init_screen();
+//  cleardevice ();
+	if	( ( _disk2Screen ( "XYYSWP.SWP" ) ) != 0 ) exit (144);
+
+///	draw_application_win();
+
+	setvect (KEY_VECTOR,mynow_key );
+	setvect (TIMER_VECTOR,mynow_timer );
+	setvect (DOS_ERROR_VECTOR,mynow_dos_error);
+	setvect (MOUSE_VECTOR,mynow_mouse);
+	mouse_on;
+}
+
+
+// if swp file error occur, it return DOS_ERR Code!
+int application_class::_screen2Disk ( const char * swpfile )
+// return 0 on success // else fail
+{
+  int result = 0, i;
+  FILE *stream;
+  size_t count;
+  char tmpstr [ 32 ] = "ADFFT(c)LDh1994";
+  struct dosdate_t da;
+  struct dostime_t ti;
+
+	_dos_gettime ( & ti );
+	_dos_getdate ( & da );
+	for ( i = strlen ( tmpstr ); i < 32; i ++ ) tmpstr [ i ] = 0;
+	i = 24;
+	tmpstr [ i ++ ] = 0x05; // swp file's bandle ID
+	i ++;
+	*( (unsigned int *) ( & ( tmpstr [ i ] ) ) ) =
+			( (unsigned) ti.hour<<11 ) + ( (unsigned) ti.minute<<5) +
+			(unsigned) ti.second + 2;
+	i ++; i ++;
+	*( (unsigned int *) ( & ( tmpstr [ i ] ) ) ) =
+			( ( da.year - 1980 )<<9 ) + ( (unsigned) da.month<<5) +
+			(unsigned) da.day;
+
+	if (( stream = fopen(swpfile, "w+b")) == NULL ) return (-1);
+	if (( count = fwrite(tmpstr,32 , 1, stream)) != 1 )  return (-1);
+
+//	if	( ( _currentGrafPort->device == VGA )	// IS VGAHI
+//		&& ( _currentGrafPort->mode == VGAHI ) )
+	if	( ( 1 )
+		&& ( 1 ) )
+		{
+		for ( i = 0; i < 4; i ++ )
+			{
+			// enable VGA bit-plane read
+			_selectVGABitPlane ( i, 0 );
+			fseek ( stream,i* 38400L+32, SEEK_SET );
+			if ((count =fwrite((void far*)0xa0000000L,
+					(unsigned)38400, 1, stream) ) != 1 ) return (-1);
+			}
+		}
+	else return (-1);
+
+	if	( ( fclose ( stream ) ) != 0 ) return -1;
+	return 0;
+}
+
+
+
+int application_class::_disk2Screen ( const char * swpfile )
+{
+  int result = 0, i;
+  FILE *stream;
+  size_t count;
+  char tmpstr [ 32 ];
+
+	if (( stream = fopen(swpfile, "r+b")) == NULL ) return (-1);
+	if (( count = fread (tmpstr,32 , 1, stream)) != 1 )  return (-1);
+
+	if	( ( strcmp ( tmpstr, "ADFFT(c)LDh1994" ) != 0 ) || ( tmpstr [ 24 ] != 0x05 ) )
+		return dosFileNotFound;
+
+//	if	( ( _currentGrafPort->device == VGA )  //	OK VGAHI
+//		&& ( _currentGrafPort->mode == VGAHI ) )
+	if	( ( 1 )
+		&& ( 1 ) )
+		{
+		for ( i = 0; i < 4; i ++ )
+			{
+			// enable VGA bit-plane write
+			_selectVGABitPlane ( i, 1 );
+			fseek ( stream,i* 38400L+32, SEEK_SET );
+			if ((count =fread ((void far*)0xa0000000L,
+					(unsigned)38400, 1, stream) ) != 1 ) return (-1);
+			}
+		}
+	else return (-1);
+
+	if	( ( fclose ( stream ) ) != 0 ) return -1;
+	return 0;
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+//////////////////////////	exec a dialog  //////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+int application_class::exec_dialog(Tdialog *pdialog_handled)
+{ int ret_value;
+  int keynum;
+
+  class MSGQueue savqueue;
+  MSG savmsg;
+
+	savqueue =thequeue;
+	savmsg =sysmsg;
+	thequeue.Reset();
+	pdialog_handled->open_one_win ();
+	do {
+		ret_value=main_message_loop();
+	}	while ( ( (ret_value != Dlg_OK)&&(ret_value!=Dlg_CANCEL) ) ||   //Dlg_OK or Dlg_CANCEL
+				(pdialog_handled ==pcurrent_selected_win )  );
+// similar to run
+// others no need to delete now
+ //	No need to delete pdialog_handled;--->deleted as it is closed
+	asm cli;
+	sysmsg   =savmsg;
+	thequeue =savqueue;
+	asm sti;
+
+	return ret_value;
+}
+
+///////////////////////////////////////////////////////////////////////////
+void interrupt application_class::timer(...)
+{
+//	disable();
+//  mouse still makes the program crash////////////////// WHY
+	if (!timer_active){
+		timer_active =TRUE;
+		(*old_timer)(...);
+		if (thequeue.QueueFull()) goto Ret;
+///Prevent more queue
+		if ( thequeue.first !=thequeue.last ) {
+			if (( thequeue.msg_array[thequeue.oldfirst].Action==TimerMSG)
+				|| (thequeue.msg_array[thequeue.oldfirst].Action==SlowTimerMSG))
+					goto Ret;
+		}
+		time_counter++;
+		slow_time_counter ++;
+		if ( time_counter > TIMER_COUNT ){
+			time_counter =0;
+			thequeue.SendMessage(0,TimerMSG,NULL);
+		}
+		if (slow_time_counter > SLOW_TIMER_COUNT ) {
+			slow_time_counter =0 ;
+			thequeue.SendMessage(0,SlowTimerMSG,NULL);
+		}
+Ret:	timer_active =FALSE;
+	}
+//	enable();
+}
+
+void interrupt (* application_class::old_timer) (...)=getvect(0x19);
+void interrupt (* application_class::old_key  ) (...)=getvect(0x19);
+void interrupt (* application_class::old_mouse) (...)=getvect(0x19);
+void interrupt (* application_class::old_dos_error) (...)=getvect(0x19);
+/*
+#define MYBIOSKEY 				\
+	switch (key_code) {			\
+		case 0x48e0:     		\
+			key_code=UPKEY;		\
+			break;				\
+		case 0x4be0:        	\
+			key_code=LEFTKEY;	\
+			break;				\
+		case 0x4de0:        	\
+			key_code=RIGHTKEY;	\
+			break;				\
+		case 0x50e0:        	\
+			key_code=DOWNKEY;	\
+			break;				\
+								\
+		case 0x8de0:        	\
+			key_code=CTRL_UP;	\
+			break;				\
+		case 0x73e0:        	\
+			key_code=CTRL_LEFT;				\
+			break;				\
+		case 0x74e0:            \
+			key_code=CTRL_RIGHT;			\
+			break;				\
+		case 0x91e0:            \
+			key_code=CTRL_DOWN;	\
+			break;				\
+		case SPACEKEY:                              \
+			if ( bioskey (0x12) & 0x08 )			\
+				key_code =ALT_SPACE;  		        \
+			break;									\
+		case ALT_LEFT:                              \
+			if ( bioskey (0x12) & 0x04 )			\
+				key_code =CTRL_ALT_LEFT;            \
+			break;									\
+		case ALT_RIGHT:                             \
+			if ( bioskey (0x12) & 0x04 )			\
+				key_code =CTRL_ALT_RIGHT;           \
+			break;									\
+	};
+*/
+#define MYBIOSKEY 				\
+	switch (tmp) {			\
+		case 0x53e0:            \
+			tmp=DELKEY;			\
+			break;          \
+		case 0x52e0:            \
+			tmp=INSKEY;			\
+			break;          \
+		case 0x49e0:            \
+			tmp=PGUPKEY;		\
+			break;          \
+		case 0x47e0:            \
+			tmp=HOMEKEY;		\
+			break;          \
+		case 0x4fe0:            \
+			tmp=ENDKEY;			\
+			break;          \
+		case 0x51e0:     		\
+			tmp=PGDNKEY;		\
+			break;				\
+		case 0x4be0:        	\
+			tmp=LEFTKEY;	\
+			break;				\
+		case 0x4de0:        	\
+			tmp=RIGHTKEY;	\
+			break;				\
+		case 0x48e0:        	\
+			tmp=UPKEY;		\
+			break;				\
+		case 0x50e0:        	\
+			tmp=DOWNKEY;	\
+			break;				\
+								\
+		case 0x8de0:        	\
+			tmp=CTRL_UP;	\
+			break;				\
+		case 0x73e0:        	\
+			tmp=CTRL_LEFT;				\
+			break;				\
+		case 0x74e0:            \
+			tmp=CTRL_RIGHT;			\
+			break;				\
+		case 0x91e0:            \
+			tmp=CTRL_DOWN;	\
+			break;				\
+		case SPACEKEY:                              \
+			if ( bioskey (0x12) & 0x08 )			\
+				tmp =ALT_SPACE;  		        \
+			break;									\
+		case ALT_LEFT:                              \
+			if ( bioskey (0x12) & 0x04 )			\
+				tmp =CTRL_ALT_LEFT;            \
+			break;									\
+		case ALT_RIGHT:                             \
+			if ( bioskey (0x12) & 0x04 )			\
+				tmp =CTRL_ALT_RIGHT;           \
+			break;									\
+	};
+
+void interrupt application_class::key (...)
+{ register int tmp;
+  MSG tmpmsg;
+//	disable();
+//~	(*old_key)(...);
+	if (!kb_active ){
+		kb_active  =TRUE;
+		(*old_key)(...);
+
+//~		switch (bioskey(1)) {
+		switch (bioskey(0x11)) {
+			case -1:
+				thequeue.SendMessage(0,CtrlBreakMSG,NULL );
+				break;
+			case  0:break;
+			default :
+//~				key_code=bioskey(0);
+//				tmp =key_code;
+//~				key_code=bioskey(0x10);
+				tmp=bioskey(0x10);
+				if (thequeue.QueueFull()) 	goto Ret;
+				MYBIOSKEY;
+				if ( thequeue.first !=thequeue.last ) {
+					if (( thequeue.msg_array[thequeue.oldfirst].Action
+						==KeyPressedMSG) && (tmp==key_code))
+					goto Ret;
+				}
+//				if ( thequeue.PeekMessage (tmpmsg) !=FALSE ){
+//					if ((tmpmsg.Action==KeyPressedMSG) && (tmp==key_code))
+//						goto Ret;
+//				}
+				key_code =tmp;
+				thequeue.SendMessage(0, KeyPressedMSG,NULL);
+		}
+Ret:	kb_active =FALSE;
+	}
+//	enable();
+}
+
+
+void interrupt  application_class::mouse(...)
+{
+//	disable();
+	(*old_mouse)(...);
+	if (!mouse_active ){
+		mouse_active  =TRUE;
+		if (in_win_moving) {
+			if (sysmouse->get_release_count(LEFT_BUTTON) >0 ) {
+				thequeue.SendMessage(pcurrent_selected_win->ID
+					,WinMovedSizedMSG,pcurrent_selected_win );
+				in_win_moving =FALSE;
+				mouse_active =FALSE;
+				return ;
+			}
+			sysmouse->get_posn ();
+			if ( (abs(old_mouse_x-mouse_x )<10) && (abs(old_mouse_y-mouse_y)<10) ){
+				mouse_active =FALSE;
+				return ;
+			}
+			thequeue.SendMessage(0,WinMovingSizingMSG,pcurrent_selected_win);
+			mouse_active =FALSE;
+			return;
+		}
+		if (sysmouse->get_press_count(LEFT_BUTTON) >0 )
+			thequeue.SendMessage(0,MouseLButtonDownMSG,NULL );
+		mouse_active =FALSE;
+	}
+//	enable();
+}
+
+void interrupt  application_class::dos_error(...)
+{ int i,j;
+	i=_AX;
+	j=_DI;
+	if (dos_error_active ) return ;
+	dos_error_active =TRUE;
+
+//	enable();
+	if ( i & 0x8000 ); // AH bit7 is set ; means not disk error
+	else {
+		switch (j & 0xff ) {
+			case 0x00:strcpy (msgbuf,"Write Protected");break;
+			case 0x01:strcpy (msgbuf,"Invalid Drive Number");break;
+			case 0x02:strcpy (msgbuf,"Drive not ready");break;
+			default :strcpy (msgbuf,"Drive error");break;
+		}
+		diskerrorno = j & 0xff ;
+		putch('\007');
+		// To let the owner do next && retry,etc
+//		if (theprogram->exec_dialog(new Tmsgbox("Message",msgbuf,MB_RETRYCANCEL))
+//			== Dlg_OK ) _AL=0x01;
+//			else 	_AL =0x02;
+		dos_error_active =FALSE;
+//		_AL =0x00;  cannot be touched by the caller
+//		asm {
+//			mov bp,sp
+//			mov ax,[bp+22]
+//			mov al,0
+//			mov [bp+22],ax
+//		}
+		return;
+	}
+	(*old_dos_error );
+	dos_error_active =FALSE;
+}

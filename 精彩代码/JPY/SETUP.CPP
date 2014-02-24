@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <bios.h>
 #include <io.h>
-#include <sys/stat.h>
+#include <stat.h>
 #include <fcntl.h>
 int main()
   {

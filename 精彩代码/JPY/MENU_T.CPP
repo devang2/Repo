@@ -10,7 +10,7 @@
 #include <time.h>
 #include <io.h>
 #include <float.h>
-#include <sys/stat.h>
+#include <stat.h>
 #include <fcntl.h>
 #include <dir.h>
 #include "mouse.h"
