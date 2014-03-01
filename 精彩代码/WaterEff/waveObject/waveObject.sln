@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "waveObject", "waveObject\waveObject.vcproj", "{81F4A25D-5809-435B-A58A-B9A1F5B91DC1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{81F4A25D-5809-435B-A58A-B9A1F5B91DC1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{81F4A25D-5809-435B-A58A-B9A1F5B91DC1}.Debug|Win32.Build.0 = Debug|Win32
+		{81F4A25D-5809-435B-A58A-B9A1F5B91DC1}.Release|Win32.ActiveCfg = Release|Win32
+		{81F4A25D-5809-435B-A58A-B9A1F5B91DC1}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
