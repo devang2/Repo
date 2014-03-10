@@ -1,0 +1,34 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: QR_Image - Win32 Debug--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating command line "rc.exe /l 0x411 /fo"Debug/QR_Image.res" /d "_DEBUG" /d "_AFXDLL" "C:\Documents and Settings\Administrator\桌面\嵌入式训练项目\嵌入式软件项目实训\QR二维编码源代码\QR_Image.rc"" 
+Creating temporary file "C:\DOCUME~1\ADMINI~1\LOCALS~1\Temp\RSP9B.tmp" with contents
+[
+/nologo /subsystem:windows /incremental:yes /pdb:"Debug/QR_Image.pdb" /debug /machine:I386 /out:"Debug/QR_Image.exe" /pdbtype:sept 
+".\Debug\BottomView.obj"
+".\Debug\ImageView.obj"
+".\Debug\MainFrm.obj"
+".\Debug\QR_Encode.obj"
+".\Debug\QR_Image.obj"
+".\Debug\RightView.obj"
+".\Debug\StdAfx.obj"
+".\Debug\WatermarkDlg.obj"
+".\Debug\QR_Image.res"
+]
+Creating command line "link.exe @C:\DOCUME~1\ADMINI~1\LOCALS~1\Temp\RSP9B.tmp"
+<h3>Output Window</h3>
+Compiling resources...
+Linking...
+
+
+
+<h3>Results</h3>
+QR_Image.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>
