@@ -1,3 +1,0 @@
-deldrv.obj + oem.obj +
-bio.obj + hardint.obj + lpstring.obj + keys + _msgret.obj
-deldrv.exe /NOI ;

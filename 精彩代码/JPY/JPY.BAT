@@ -1,3 +1,0 @@
-cd\jpy
-jpy
-cd\

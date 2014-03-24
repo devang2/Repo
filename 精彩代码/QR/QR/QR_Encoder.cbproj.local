@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject>
-	<Transactions>
-    <Transaction>2009-02-02 14:05:36.890.cpp,C:\Documents and Settings\chen-60\My Documents\RAD Studio\Projects\Unit1.cpp=C:\Documents and Settings\chen-60\Desktop\QR_Image_Source\CB\Unit1.cpp</Transaction>
-    <Transaction>2009-02-02 14:05:36.906.h,C:\Documents and Settings\chen-60\My Documents\RAD Studio\Projects\Unit1.h=C:\Documents and Settings\chen-60\Desktop\QR_Image_Source\CB\Unit1.h</Transaction>
-    <Transaction>2009-02-02 14:05:36.906.dfm,C:\Documents and Settings\chen-60\My Documents\RAD Studio\Projects\Unit1.dfm=C:\Documents and Settings\chen-60\Desktop\QR_Image_Source\CB\Unit1.dfm</Transaction>
-    <Transaction>2009-02-02 14:05:47.171.cbproj,C:\Documents and Settings\chen-60\My Documents\RAD Studio\Projects\Project1.cbproj=C:\Documents and Settings\chen-60\Desktop\QR_Image_Source\CB\QR_Encoder.cbproj</Transaction>
-  </Transactions>
-</BorlandProject>

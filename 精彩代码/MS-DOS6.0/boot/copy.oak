@@ -1,6 +1,0 @@
-all:
-   del boot\*.*                              < $(OAKDIR)\ycr.key
-   xcopy boot $(OAKDIR)\boot                 < $(OAKDIR)\d.key
-   del $(OAKDIR)\boot\copy.oak
-
-

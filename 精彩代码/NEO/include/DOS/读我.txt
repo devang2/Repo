@@ -1,6 +1,0 @@
-请将这个文件夹中的内容复制到你的Turbo C(Win-TC)或TC++、BC++下的include文件夹里，
-再在你的源代码开头加上#include "neo.h"或#include <neo.h>，就可以进入NEO SDK的世界!
-
-注意：
-A. 由于NEO For DOS与Borland的graphics.h不兼容，所以在你的代码中不能包含graphics.h；
-B. Windows 2000的虚拟DOS经过简单的设置也能够使用NEO SDK，设置方法请参考使用手册的“常见问题解答(FAQ)”。

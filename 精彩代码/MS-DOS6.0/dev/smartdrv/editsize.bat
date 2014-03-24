@@ -1,2 +1,0 @@
-debug smartdrv.bin < hdrmod
-
